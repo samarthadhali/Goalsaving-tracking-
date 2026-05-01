@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaveGoal — Goal-Based Savings Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f7ff;
+    --surface: #ffffff;
+    --surface2: #e8f2ff;
+    --border: rgba(99,153,255,0.18);
+    --accent: #2563eb;
+    --accent2: #0ea572;
+    --accent3: #7c3aed;
+    --danger: #e53e3e;
+    --text: #1e293b;
+    --muted: #64748b;
+    --card-shadow: 0 8px 32px rgba(37,99,235,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRADIENT BG ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 20% 10%, rgba(99,153,255,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, rgba(14,165,114,0.10) 0%, transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; position: relative; z-index: 1; }
+  .screen.active { display: flex; }
+
+  /* ═══════════════════════════════
+     AUTH SCREEN
+  ═══════════════════════════════ */
+  #auth-screen {
+    min-height: 100vh;
+    align-items: center; justify-content: center;
+    flex-direction: column;
+    padding: 24px;
+  }
+
+  .auth-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .auth-tagline {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 40px;
+    letter-spacing: 0.5px;
+  }
+
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(37,99,235,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    animation: fadeUp 0.5s ease;
+  }
+
+  .auth-tabs {
+    display: flex;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 28px;
+    gap: 4px;
+  }
+
+  .auth-tab {
+    flex: 1; padding: 10px;
+    border: none; border-radius: 9px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    background: transparent; color: var(--muted);
+  }
+
+  .auth-tab.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .form-group { margin-bottom: 18px; }
+
+  .form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  .form-group input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .form-group input:focus {
+    border-color: var(--accent);
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(37,99,235,0.35);
+  }
+
+  .success-msg {
+    background: rgba(14,165,114,0.10);
+    border: 1px solid rgba(14,165,114,0.35);
+    color: #0a7a54;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+  }
+
+  .error-msg {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.3);
+    color: var(--danger);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    display: none;
+  }
+
+  /* ═══════════════════════════════
+     DASHBOARD
+  ═══════════════════════════════ */
+  #dashboard-screen {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .nav-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent3), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+  .dashboard-body {
+    padding: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  .section-subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+
+  .btn-new-goal {
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 22px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .btn-new-goal:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(37,99,235,0.30);
+  }
+
+  /* SUMMARY CARDS */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+
+  .summary-card:hover { transform: translateY(-2px); }
+
+  .summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+  }
+
+  .summary-card.gold::before { background: var(--accent); }
+  .summary-card.green::before { background: var(--accent2); }
+  .summary-card.blue::before { background: var(--accent3); }
+
+  .summary-icon { font-size: 1.8rem; margin-bottom: 12px; }
+  .summary-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .summary-label { color: var(--muted); font-size: 0.8rem; letter-spacing: 0.5px; }
+
+  /* GOALS GRID */
+  .goals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+
+  .goal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 26px;
+    transition: all 0.25s;
+    animation: fadeUp 0.4s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .goal-card:hover {
+    border-color: rgba(37,99,235,0.35);
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(37,99,235,0.12);
+  }
+
+  .goal-card.completed {
+    border-color: rgba(62,207,142,0.4);
+    background: linear-gradient(135deg, var(--surface), rgba(62,207,142,0.05));
+  }
+
+  .goal-badge {
+    position: absolute;
+    top: 20px; right: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  .badge-active { background: rgba(99,102,241,0.2); color: var(--accent3); }
+  .badge-done { background: rgba(62,207,142,0.2); color: var(--accent2); }
+
+  .goal-emoji { font-size: 2rem; margin-bottom: 10px; }
+
+  .goal-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    padding-right: 80px;
+  }
+
+  .goal-target {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-bottom: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* PROGRESS BAR */
+  .progress-wrap {
+    background: var(--surface2);
+    border-radius: 20px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .progress-bar {
+    height: 100%;
+    border-radius: 20px;
+    background: linear-gradient(90deg, var(--accent), #7c3aed);
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+
+  .progress-bar.complete {
+    background: linear-gradient(90deg, var(--accent2), #22d3ee);
+  }
+
+  .progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 8px; height: 100%;
+    background: rgba(255,255,255,0.4);
+    border-radius: 20px;
+  }
+
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    margin-bottom: 20px;
+  }
+
+  .saved-amt { color: var(--accent2); font-family: 'DM Mono', monospace; font-weight: 500; }
+  .remain-amt { color: var(--muted); font-family: 'DM Mono', monospace; }
+  .pct { font-weight: 700; font-family: 'DM Mono', monospace; }
+
+  .goal-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-add-savings {
+    flex: 1;
+    background: rgba(37,99,235,0.08);
+    border: 1px solid rgba(37,99,235,0.25);
+    color: var(--accent);
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .btn-add-savings:hover {
+    background: rgba(37,99,235,0.15);
+  }
+
+  .btn-delete-goal {
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.2);
+    color: var(--danger);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .btn-delete-goal:hover {
+    background: rgba(248,113,113,0.15);
+  }
+
+  .goal-history {
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .goal-history.open { max-height: 200px; overflow-y: auto; }
+
+  .history-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 0.82rem;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .history-item:last-child { border-bottom: none; }
+  .history-amt { color: var(--accent2); }
+  .history-date { color: var(--muted); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+
+  .empty-state .empty-icon { font-size: 3.5rem; margin-bottom: 16px; }
+  .empty-state h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  /* ═══════════════════════════════
+     MODAL
+  ═══════════════════════════════ */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 36px;
+    width: 100%;
+    max-width: 460px;
+    animation: fadeUp 0.3s ease;
+    box-shadow: 0 24px 60px rgba(37,99,235,0.15);
+  }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+  }
+
+  .emoji-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .emoji-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .emoji-btn:hover, .emoji-btn.selected {
+    border-color: var(--accent);
+    background: rgba(37,99,235,0.10);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-confirm {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+
+  .btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,99,235,0.30); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 30px; right: 30px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    color: var(--text);
+    box-shadow: 0 8px 32px rgba(37,99,235,0.15);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 320px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(62,207,142,0.4); }
+  .toast.error { border-color: rgba(248,113,113,0.4); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+  @media (max-width: 600px) {
+    .dashboard-body { padding: 20px 16px; }
+    .navbar { padding: 16px 20px; }
+    .goals-grid { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ AUTH SCREEN ═══════════ -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-logo">SaveGoal</div>
+  <div class="auth-tagline">Track your savings. Reach your dreams.</div>
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Login</button>
+      <button class="auth-tab" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <!-- Login -->
+    <div id="login-form">
+      <div class="success-msg" id="login-success" style="display:none"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="handleLogin()">Login →</button>
+      <div class="error-msg" id="login-error"></div>
+    </div>
+    <!-- Signup -->
+    <div id="signup-form" style="display:none">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="signup-name" placeholder="Rahul Sharma">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="Min 6 characters">
+      </div>
+      <button class="btn-primary" onclick="handleSignup()">Create Account →</button>
+      <div class="error-msg" id="signup-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ DASHBOARD SCREEN ═══════════ -->
+<div id="dashboard-screen" class="screen">
+  <nav class="navbar">
+    <div class="nav-logo">SaveGoal</div>
+    <div class="nav-user">
+      <div class="nav-avatar" id="nav-avatar">R</div>
+      <span id="nav-username" style="font-size:0.9rem;color:var(--muted)">Rahul</span>
+      <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
+  </nav>
+  <div class="dashboard-body">
+    <!-- Summary -->
+    <div class="summary-grid" id="summary-grid">
+      <div class="summary-card gold">
+        <div class="summary-icon">🎯</div>
+        <div class="summary-value" id="sum-goals">0</div>
+        <div class="summary-label">Total Goals</div>
+      </div>
+      <div class="summary-card green">
+        <div class="summary-icon">💰</div>
+        <div class="summary-value" id="sum-saved">₹0</div>
+        <div class="summary-label">Total Saved</div>
+      </div>
+      <div class="summary-card blue">
+        <div class="summary-icon">✅</div>
+        <div class="summary-value" id="sum-done">0</div>
+        <div class="summary-label">Goals Completed</div>
+      </div>
+    </div>
+    <!-- Goals -->
+    <div class="section-header">
+      <div>
+        <div class="section-title">My Goals</div>
+        <div class="section-subtitle" id="welcome-msg">Welcome back!</div>
+      </div>
+      <button class="btn-new-goal" onclick="openGoalModal()">+ New Goal</button>
+    </div>
+    <div class="goals-grid" id="goals-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════ NEW GOAL MODAL ═══════════ -->
+<div class="modal-overlay" id="goal-modal">
+  <div class="modal">
+    <div class="modal-title">🎯 Create New Goal</div>
+    <div style="margin-bottom:12px;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;">Pick an icon</div>
+    <div class="emoji-grid" id="emoji-grid"></div>
+    <div class="form-group">
+      <label>Goal Name</label>
+      <input type="text" id="goal-name" placeholder="e.g. New Bike, Goa Trip...">
+    </div>
+    <div class="form-group">
+      <label>Target Amount (₹)</label>
+      <input type="number" id="goal-target" placeholder="e.g. 10000">
+    </div>
+    <div class="form-group">
+      <label>Description (optional)</label>
+      <input type="text" id="goal-desc" placeholder="e.g. My dream Royal Enfield">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeGoalModal()">Cancel</button>
+      <button class="btn-confirm" onclick="createGoal()">Create Goal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SAVINGS MODAL -->
+<div class="modal-overlay" id="savings-modal">
+  <div class="modal">
+    <div class="modal-title">💸 Add Savings</div>
+    <div id="savings-goal-name" style="color:var(--muted);margin-bottom:20px;font-size:0.9rem;"></div>
+    <div class="form-group">
+      <label>Amount (₹)</label>
+      <input type="number" id="savings-amount" placeholder="e.g. 500">
+    </div>
+    <div class="form-group">
+      <label>Note (optional)</label>
+      <input type="text" id="savings-note" placeholder="e.g. Weekly savings">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSavingsModal()">Cancel</button>
+      <button class="btn-confirm" onclick="addSavings()">Add Money ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║              JAVA LOGIC LAYER (JavaScript translation)          ║
+// ║    Faithful OOP structure: classes, methods, encapsulation      ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+/**
+ * Java equivalent:
+ * public class User {
+ *   private String id, name, email, password;
+ *   public User(String name, String email, String password) { ... }
+ * }
+ */
+class User {
+  constructor(name, email, password) {
+    this.id = 'u_' + Date.now();
+    this.name = name;
+    this.email = email.toLowerCase().trim();
+    this.password = password; // In Java: BCrypt.hashpw(password, BCrypt.gensalt())
+    this.createdAt = new Date().toISOString();
+    this.goals = []; // List<SavingsGoal>
+  }
+  getInitials() {
+    return this.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  }
+}
+
+/**
+ * Java equivalent:
+ * public class SavingsTransaction {
+ *   private String id; private double amount; private String note, date;
+ * }
+ */
+class SavingsTransaction {
+  constructor(amount, note = '') {
+    this.id = 'tx_' + Date.now();
+    this.amount = parseFloat(amount);
+    this.note = note;
+    this.date = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+    this.timestamp = Date.now();
+  }
+}
+
+/**
+ * Java equivalent:
+ * public class SavingsGoal {
+ *   private String id, name, emoji, description;
+ *   private double targetAmount, savedAmount;
+ *   private List<SavingsTransaction> transactions;
+ *   public void addSavings(double amount, String note) { ... }
+ *   public double getProgress() { ... }
+ *   public double getRemainingAmount() { ... }
+ *   public boolean isCompleted() { ... }
+ * }
+ */
+class SavingsGoal {
+  constructor(name, targetAmount, emoji, description = '') {
+    this.id = 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    this.name = name;
+    this.targetAmount = parseFloat(targetAmount);
+    this.savedAmount = 0.0;
+    this.emoji = emoji;
+    this.description = description;
+    this.transactions = []; // List<SavingsTransaction>
+    this.createdAt = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  // public void addSavings(double amount, String note)
+  addSavings(amount, note) {
+    if (amount <= 0) throw new Error("Amount must be positive");
+    const tx = new SavingsTransaction(amount, note);
+    this.transactions.push(tx);
+    this.savedAmount = parseFloat((this.savedAmount + tx.amount).toFixed(2));
+    return tx;
+  }
+
+  // public double getProgressPercentage()
+  getProgressPercentage() {
+    if (this.targetAmount === 0) return 0;
+    return Math.min(100, Math.round((this.savedAmount / this.targetAmount) * 100));
+  }
+
+  // public double getRemainingAmount()
+  getRemainingAmount() {
+    return Math.max(0, parseFloat((this.targetAmount - this.savedAmount).toFixed(2)));
+  }
+
+  // public boolean isCompleted()
+  isCompleted() {
+    return this.savedAmount >= this.targetAmount;
+  }
+}
+
+/**
+ * Java equivalent:
+ * public class UserRepository {  // in-memory / localStorage persistence
+ *   private static Map<String, User> store = new HashMap<>();
+ *   public static void save(User user) { ... }
+ *   public static User findByEmail(String email) { ... }
+ *   public static boolean emailExists(String email) { ... }
+ * }
+ */
+class UserRepository {
+  static STORAGE_KEY = 'savegoal_users';
+
+  static _load() {
+    try {
+      return JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+    } catch { return {}; }
+  }
+
+  static _persist(store) {
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(store));
+  }
+
+  static save(user) {
+    const store = this._load();
+    store[user.email] = user;
+    this._persist(store);
+  }
+
+  static findByEmail(email) {
+    const store = this._load();
+    const data = store[email.toLowerCase().trim()];
+    if (!data) return null;
+    // Restore full User instance from plain JSON
+    const user = new User(data.name, data.email, data.password);
+    user.id = data.id;
+    user.createdAt = data.createdAt;
+    // Restore each SavingsGoal instance
+    user.goals = (data.goals || []).map(gData => {
+      const goal = new SavingsGoal(gData.name, gData.targetAmount, gData.emoji, gData.description);
+      goal.id = gData.id;
+      goal.savedAmount = gData.savedAmount;
+      goal.createdAt = gData.createdAt;
+      goal.transactions = (gData.transactions || []).map(tx => {
+        const t = new SavingsTransaction(tx.amount, tx.note);
+        t.id = tx.id;
+        t.date = tx.date;
+        t.timestamp = tx.timestamp;
+        return t;
+      });
+      return goal;
+    });
+    return user;
+  }
+
+  static emailExists(email) {
+    return this.findByEmail(email) !== null;
+  }
+
+  static authenticate(email, password) {
+    const user = this.findByEmail(email);
+    if (!user) return null;
+    return user.password === password ? user : null; // In Java: BCrypt.checkpw(password, user.password)
+  }
+}
+
+/**
+ * Java equivalent:
+ * public class AuthService {
+ *   public static User signup(String name, String email, String password) throws Exception { ... }
+ *   public static User login(String email, String password) throws Exception { ... }
+ * }
+ */
+class AuthService {
+  static signup(name, email, password) {
+    if (!name || name.trim().length < 2) throw new Error("Name must be at least 2 characters");
+    if (!email || !email.includes('@')) throw new Error("Invalid email address");
+    if (!password || password.length < 6) throw new Error("Password must be at least 6 characters");
+    if (UserRepository.emailExists(email)) throw new Error("Account with this email already exists");
+
+    const user = new User(name.trim(), email, password);
+    UserRepository.save(user);
+    return user;
+  }
+
+  static login(email, password) {
+    if (!email || !password) throw new Error("Email and password are required");
+    const user = UserRepository.authenticate(email, password);
+    if (!user) throw new Error("Invalid email or password");
+    return user;
+  }
+}
+
+/**
+ * Java equivalent:
+ * public class GoalService {
+ *   public static SavingsGoal createGoal(User user, String name, double target, String emoji, String desc) { ... }
+ *   public static void deleteGoal(User user, String goalId) { ... }
+ *   public static SavingsTransaction addSavings(User user, String goalId, double amount, String note) { ... }
+ *   public static Map<String, Object> getSummary(User user) { ... }
+ * }
+ */
+class GoalService {
+  static createGoal(user, name, targetAmount, emoji, description) {
+    if (!name || name.trim().length === 0) throw new Error("Goal name is required");
+    if (!targetAmount || isNaN(targetAmount) || targetAmount <= 0) throw new Error("Target amount must be positive");
+
+    const goal = new SavingsGoal(name.trim(), targetAmount, emoji, description);
+    user.goals.push(goal);
+    UserRepository.save(user);
+    return goal;
+  }
+
+  static deleteGoal(user, goalId) {
+    const idx = user.goals.findIndex(g => g.id === goalId);
+    if (idx === -1) throw new Error("Goal not found");
+    user.goals.splice(idx, 1);
+    UserRepository.save(user);
+  }
+
+  static addSavings(user, goalId, amount, note) {
+    const goal = user.goals.find(g => g.id === goalId);
+    if (!goal) throw new Error("Goal not found");
+    if (!amount || isNaN(amount) || amount <= 0) throw new Error("Amount must be positive");
+
+    const tx = goal.addSavings(parseFloat(amount), note);
+    UserRepository.save(user);
+    return tx;
+  }
+
+  static getSummary(user) {
+    // Returns Map<String, Object> equivalent
+    return {
+      totalGoals: user.goals.length,
+      totalSaved: user.goals.reduce((sum, g) => sum + g.savedAmount, 0),
+      completedGoals: user.goals.filter(g => g.isCompleted()).length
+    };
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║                     UI / CONTROLLER LAYER                       ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+let currentUser = null;
+let activeGoalId = null;
+let selectedEmoji = '🎯';
+
+const EMOJIS = ['🏍️','✈️','🏠','💻','📱','🎓','💍','🏋️','🎮','🚗','🌴','🎵','📷','👟','🎁','🍕'];
+
+// ── AUTH ──────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
+  // Clear success message when manually switching to signup
+  if (tab === 'signup') {
+    const successEl = document.getElementById('login-success');
+    if (successEl) successEl.style.display = 'none';
+  }
+}
+
+function handleLogin() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  try {
+    currentUser = AuthService.login(email, password);
+    errEl.style.display = 'none';
+    goToDashboard();
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function handleSignup() {
+  const name = document.getElementById('signup-name').value;
+  const email = document.getElementById('signup-email').value;
+  const password = document.getElementById('signup-password').value;
+  const errEl = document.getElementById('signup-error');
+  try {
+    AuthService.signup(name, email, password);
+    errEl.style.display = 'none';
+    // Clear signup fields
+    document.getElementById('signup-name').value = '';
+    document.getElementById('signup-email').value = '';
+    document.getElementById('signup-password').value = '';
+    // Switch to login tab and show success message
+    switchTab('login');
+    const successEl = document.getElementById('login-success');
+    successEl.textContent = '✅ Account created! Please log in with your credentials.';
+    successEl.style.display = 'block';
+    // Pre-fill email for convenience
+    document.getElementById('login-email').value = email;
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function handleLogout() {
+  currentUser = null;
+  document.getElementById('auth-screen').classList.add('active');
+  document.getElementById('dashboard-screen').classList.remove('active');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  const successEl = document.getElementById('login-success');
+  if (successEl) successEl.style.display = 'none';
+}
+
+function goToDashboard() {
+  document.getElementById('auth-screen').classList.remove('active');
+  document.getElementById('dashboard-screen').classList.add('active');
+  document.getElementById('nav-avatar').textContent = currentUser.getInitials();
+  document.getElementById('nav-username').textContent = currentUser.name.split(' ')[0];
+  document.getElementById('welcome-msg').textContent = 'Welcome back, ' + currentUser.name.split(' ')[0] + '! 👋';
+  renderDashboard();
+}
+
+// ── DASHBOARD ─────────────────────────────────────
+function renderDashboard() {
+  const summary = GoalService.getSummary(currentUser);
+  document.getElementById('sum-goals').textContent = summary.totalGoals;
+  document.getElementById('sum-saved').textContent = '₹' + formatNum(summary.totalSaved);
+  document.getElementById('sum-done').textContent = summary.completedGoals;
+
+  const grid = document.getElementById('goals-grid');
+  if (currentUser.goals.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🎯</div>
+      <h3>No goals yet</h3>
+      <p>Create your first savings goal and start your journey!</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = currentUser.goals.map(renderGoalCard).join('');
+}
+
+function renderGoalCard(goal) {
+  const pct = goal.getProgressPercentage();
+  const remaining = goal.getRemainingAmount();
+  const done = goal.isCompleted();
+  const historyItems = [...goal.transactions].reverse().slice(0,5)
+    .map(tx => `<div class="history-item"><span>${tx.note || 'Savings'}</span><span class="history-amt">+₹${formatNum(tx.amount)}</span><span class="history-date">${tx.date}</span></div>`).join('');
+
+  return `
+  <div class="goal-card ${done ? 'completed' : ''}" id="card-${goal.id}">
+    <span class="goal-badge ${done ? 'badge-done' : 'badge-active'}">${done ? '✅ Done' : '⚡ Active'}</span>
+    <div class="goal-emoji">${goal.emoji}</div>
+    <div class="goal-name">${goal.name}</div>
+    <div class="goal-target">Target: ₹${formatNum(goal.targetAmount)} · Started ${goal.createdAt}</div>
+    <div class="progress-wrap">
+      <div class="progress-bar ${done ? 'complete' : ''}" style="width:${pct}%"></div>
+    </div>
+    <div class="progress-stats">
+      <span class="saved-amt">Saved: ₹${formatNum(goal.savedAmount)}</span>
+      <span class="pct" style="color:${done?'var(--accent2)':'var(--accent)'}">${pct}%</span>
+      <span class="remain-amt">${done ? 'Completed! 🎉' : 'Left: ₹'+formatNum(remaining)}</span>
+    </div>
+    <div class="goal-actions">
+      ${!done ? `<button class="btn-add-savings" onclick="openSavingsModal('${goal.id}')">+ Add Savings</button>` : `<button class="btn-add-savings" style="opacity:0.5;cursor:default">🎉 Goal Achieved!</button>`}
+      <button class="btn-delete-goal" onclick="deleteGoal('${goal.id}')">🗑</button>
+    </div>
+    ${goal.transactions.length > 0 ? `
+    <div class="goal-history" id="hist-${goal.id}">
+      ${historyItems}
+    </div>
+    <div class="history-title" onclick="toggleHistory('${goal.id}')">
+      <span id="hist-toggle-${goal.id}">▸</span> Recent Transactions (${goal.transactions.length})
+    </div>` : ''}
+  </div>`;
+}
+
+function toggleHistory(id) {
+  const el = document.getElementById('hist-' + id);
+  const toggle = document.getElementById('hist-toggle-' + id);
+  el.classList.toggle('open');
+  toggle.textContent = el.classList.contains('open') ? '▾' : '▸';
+}
+
+// ── GOAL MODAL ────────────────────────────────────
+function openGoalModal() {
+  selectedEmoji = '🎯';
+  document.getElementById('goal-name').value = '';
+  document.getElementById('goal-target').value = '';
+  document.getElementById('goal-desc').value = '';
+  const grid = document.getElementById('emoji-grid');
+  grid.innerHTML = EMOJIS.map(e =>
+    `<button class="emoji-btn ${e===selectedEmoji?'selected':''}" onclick="selectEmoji('${e}',this)">${e}</button>`
+  ).join('');
+  document.getElementById('goal-modal').classList.add('open');
+}
+
+function selectEmoji(emoji, btn) {
+  selectedEmoji = emoji;
+  document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function closeGoalModal() {
+  document.getElementById('goal-modal').classList.remove('open');
+}
+
+function createGoal() {
+  try {
+    GoalService.createGoal(
+      currentUser,
+      document.getElementById('goal-name').value,
+      document.getElementById('goal-target').value,
+      selectedEmoji,
+      document.getElementById('goal-desc').value
+    );
+    closeGoalModal();
+    renderDashboard();
+    showToast('🎯 Goal created! Start saving!', 'success');
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── SAVINGS MODAL ─────────────────────────────────
+function openSavingsModal(goalId) {
+  activeGoalId = goalId;
+  const goal = currentUser.goals.find(g => g.id === goalId);
+  document.getElementById('savings-goal-name').textContent = goal.emoji + ' ' + goal.name + ' · ₹' + formatNum(goal.getRemainingAmount()) + ' remaining';
+  document.getElementById('savings-amount').value = '';
+  document.getElementById('savings-note').value = '';
+  document.getElementById('savings-modal').classList.add('open');
+}
+
+function closeSavingsModal() {
+  document.getElementById('savings-modal').classList.remove('open');
+  activeGoalId = null;
+}
+
+function addSavings() {
+  try {
+    GoalService.addSavings(
+      currentUser,
+      activeGoalId,
+      document.getElementById('savings-amount').value,
+      document.getElementById('savings-note').value
+    );
+    const goal = currentUser.goals.find(g => g.id === activeGoalId);
+    closeSavingsModal();
+    renderDashboard();
+    if (goal.isCompleted()) {
+      showToast('🎉 Congratulations! Goal completed!', 'success');
+    } else {
+      showToast('💰 Savings added! Keep going!', 'success');
+    }
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function deleteGoal(goalId) {
+  if (!confirm('Delete this goal? All savings history will be lost.')) return;
+  try {
+    GoalService.deleteGoal(currentUser, goalId);
+    renderDashboard();
+    showToast('Goal deleted.', 'success');
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────
+function formatNum(n) {
+  return Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type === 'success' ? '✓  ' : '✕  ') + msg;
+  t.className = 'toast ' + type + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Close modals on overlay click
+document.getElementById('goal-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeGoalModal(); });
+document.getElementById('savings-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSavingsModal(); });
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeGoalModal(); closeSavingsModal(); }
+  if (e.key === 'Enter') {
+    if (document.getElementById('goal-modal').classList.contains('open')) createGoal();
+    if (document.getElementById('savings-modal').classList.contains('open')) addSavings();
+    if (document.getElementById('auth-screen').classList.contains('active')) {
+      const loginVisible = document.getElementById('login-form').style.display !== 'none';
+      if (loginVisible) handleLogin(); else handleSignup();
+    }
+  }
+});
+</script>
+</body>
+</html>
